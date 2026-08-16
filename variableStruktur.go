@@ -4,13 +4,20 @@ import "fmt"
 
 func main() {
 
+	// Deklarasi variable
 	var name string = "Fahmi"
 	var age int = 20
 	var tinggi float64 = 179.9
 	var isStudent bool = true
 	var hobi = []string{"Sepakbola" , "Main PubgMobile", "Badminton"}
-
-
+	fmt.Println(
+		"Nama:", name,
+		"Umur:", age,
+		"Tinggi:", tinggi,
+		"Mahasiswa:", isStudent,
+		"Hobi:", hobi)
+	
+	// MAP
 	mahasiswa := map[string] int{
 		"Azzam"	: 95,
 		"Fahmi"	: 98,
