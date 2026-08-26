@@ -75,6 +75,10 @@ func createStudent(c *fiber.Ctx) error {
 		errs["nim"] = "wajib diisi"
 	}
 
+	if req.Grade < 0 || req.Grade > 100 {
+	errs["grade"] = "grade harus antara 0 dan 100"
+	}
+
 	if req.Password == "" {
 		errs["password"] = "wajib diisi"
 	}
@@ -97,6 +101,7 @@ func createStudent(c *fiber.Ctx) error {
 		Name:      req.Name,
 		Email:     req.Email,
 		NIM:       req.NIM,
+		Grade:     req.Grade,
 		Password:  req.Password,
 		IsActive:  true,
 		CreatedAt: time.Now(),
@@ -138,6 +143,7 @@ func replaceStudent(c *fiber.Ctx) error {
 	req.Name = strings.TrimSpace(req.Name)
 	req.Email = strings.TrimSpace(req.Email)
 	req.NIM = strings.TrimSpace(req.NIM)
+	
 
 	errs := map[string]string{}
 
@@ -169,6 +175,7 @@ func replaceStudent(c *fiber.Ctx) error {
 	students[i].Name = req.Name
 	students[i].Email = req.Email
 	students[i].NIM = req.NIM
+	students[i].Grade = req.Grade
 	students[i].IsActive = req.IsActive
 
 	return ok(
@@ -204,6 +211,7 @@ func patchStudent(c *fiber.Ctx) error {
 	if req.Name == nil &&
 		req.Email == nil &&
 		req.NIM == nil &&
+		req.Grade == nil &&
 		req.IsActive == nil {
 		return fail(
 			c, fiber.StatusBadRequest, "tidak ada field yang dikirim",
@@ -252,6 +260,16 @@ func patchStudent(c *fiber.Ctx) error {
 		}
 
 		students[i].NIM = nim
+	}
+
+	if req.Grade != nil {
+	if *req.Grade < 0 || *req.Grade > 100 {
+		return failValidation(c, map[string]string{
+			"grade": "grade harus antara 0 dan 100",
+		})
+	}
+
+	students[i].Grade = *req.Grade
 	}
 
 	if req.IsActive != nil {
@@ -360,6 +378,7 @@ func listStudent(c *fiber.Ctx) error {
 		"name": true,
 		"email": true,
 		"nim": true,
+		"grade": true,
 		"is_active": true,
 		"created_at": true,
 	}

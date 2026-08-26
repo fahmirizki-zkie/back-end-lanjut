@@ -8,16 +8,18 @@ type Student struct {
 	Email     string    `json:"email"`
 	NIM       string    `json:"nim"`
 	Password  string    `json:"-"`
+	Grade	  float64   `json:"grade"`
 	IsActive  bool      `json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 // Post semua filed wajib 
 type CreateStudentRequest struct {
-	Name	 string `json:"name"`
-	Email    string `json:"email"`
-	NIM      string `json:"nim"`
-	Password string `json:"password"`
+	Name	 string  `json:"name"`
+	Email    string  `json:"email"`
+	NIM      string  `json:"nim"`
+	Grade    float64 `json:"grade"`
+	Password string  `json:"password"`
 }
 
 // Put ganti seluruh isi, jadi field bertipe biasa dan wajib diisi semua 
@@ -25,6 +27,7 @@ type ReplaceStudentRequest struct {
 	Name 	 string `json:"name"`
 	Email    string `json:"email"`
 	NIM      string `json:"nim"`
+	Grade    float64 `json:"grade"`
 	IsActive bool   `json:"is_active"`
 }
 
@@ -34,6 +37,7 @@ type UpdateStudentRequest struct {
 	Name 	 *string `json:"name,omitempty"`
 	Email    *string `json:"email,omitempty"`
 	NIM      *string `json:"nim,omitempty"`
+	Grade    *float64 `json:"grade,omitempty"`
 	IsActive *bool   `json:"is_active,omitempty"`
 }
 
