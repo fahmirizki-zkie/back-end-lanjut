@@ -3,11 +3,11 @@ package main
 import "time"
 
 type Student struct {
-	ID        string    `json:"id"`
+	ID        int    `json:"id"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
 	NIM       string    `json:"nim"`
-	Password  string    `json:"password"`
+	Password  string    `json:"-"`
 	IsActive  bool      `json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -38,7 +38,7 @@ type UpdateStudentRequest struct {
 }
 
 // Amplop baku untuk semua respone 
-type Response struct {
+type WebResponse struct {
 	Success		bool        `json:"success"`
 	Message 	string      `json:"message"`
 	Data    	any 		`json:"data,omitempty"`
