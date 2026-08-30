@@ -248,10 +248,92 @@ func (h *Handler) deleteStudent(c *fiber.Ctx) error {
 }
 
 func (h *Handler) listStudent(c *fiber.Ctx) error {
+	// Pagination
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+
+	if page < 1 {
+		page = 1
+	}
+
+	if limit < 1 {
+		limit = 10
+	}
+
+	if limit > 100 {
+		limit = 100
+	}
+
+	// Search
+	search := strings.TrimSpace(c.Query("search"))
+
+	// Sorting
+	sortField := c.Query("sort", "id")
+	order := strings.ToLower(c.Query("order", "asc"))
+
+	// Filter is_active
+	var isActive *bool
+
+	isActiveParam := c.Query("is_active")
+
+	if isActiveParam != "" {
+		value, err := strconv.ParseBool(isActiveParam)
+
+		if err != nil {
+			return fail(
+				c,
+				fiber.StatusBadRequest,
+				"is_active harus true atau false",
+			)
+		}
+
+		isActive = &value
+	}
+
+	// Whitelist kolom sorting
+	allowedSort := map[string]bool{
+		"id":         true,
+		"name":       true,
+		"nim":        true,
+		"grade":      true,
+		"is_active":  true,
+		"created_at": true,
+	}
+
+	if !allowedSort[sortField] {
+		return fail(
+			c,
+			fiber.StatusBadRequest,
+			"field sort tidak valid",
+		)
+	}
+
+	if order != "asc" && order != "desc" {
+		return fail(
+			c,
+			fiber.StatusBadRequest,
+			"order harus asc atau desc",
+		)
+	}
+
+	// Hitung OFFSET
+	offset := (page - 1) * limit
+
+	// Parameter untuk repository
+	params := repository.ListParams{
+		Search:   search,
+		IsActive: isActive,
+		Sort:     sortField,
+		Order:    order,
+		Limit:    limit,
+		Offset:   offset,
+	}
+
 	ctx, cancel := context.WithTimeout(c.UserContext(), 5*time.Second)
 	defer cancel()
 
-	students, err := h.repo.FindAll(ctx)
+	// Repository sekarang mengembalikan data + total
+	students, total, err := h.repo.FindAll(ctx, params)
 
 	if err != nil {
 		return fail(
@@ -261,10 +343,22 @@ func (h *Handler) listStudent(c *fiber.Ctx) error {
 		)
 	}
 
+	// Hitung total halaman
+	totalPage := 0
+
+	if total > 0 {
+		totalPage = (total + limit - 1) / limit
+	}
+
 	return oklist(
 		c,
 		"daftar student berhasil diambil",
 		students,
-		nil,
+		&model.Meta{
+			Page:      page,
+			Limit:     limit,
+			Total:     total,
+			TotalPage: totalPage,
+		},
 	)
 }
