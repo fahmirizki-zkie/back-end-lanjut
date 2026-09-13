@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -29,11 +30,18 @@ func Load() Config {
 }
 
 func GetEnv(key, fallback string) string {
-	value := os.Getenv(key)
-
-	if value == "" {
-		return fallback
+	if v := os.Getenv(key); v != "" {
+		return v
 	}
-
-	return value
+	return fallback
 }
+
+// GetEnvInt membaca env sebagai int, menggunakan fallback jika kosong atau tidak valid
+func GetEnvInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if i, err := strconv.Atoi(v); err == nil {
+			return i
+		}
+	}
+	return fallback
+}

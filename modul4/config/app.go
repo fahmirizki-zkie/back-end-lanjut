@@ -6,42 +6,34 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"modul4/app/service"
 	"modul4/helper"
 	"modul4/middleware"
 	"modul4/route"
 )
 
-// NewApp merakit aplikasi: membuat instance Fiber, memasang middleware,
-// lalu mendaftarkan route. File ini adalah tempat seluruh bagian bertemu.
 func NewApp(
 	logger *slog.Logger,
 	pool *pgxpool.Pool,
-	studentService *service.StudentService,
+	deps route.Dependencies,
 ) *fiber.App {
 
 	app := fiber.New(fiber.Config{
 		AppName:      GetEnv("APP_NAME", "Praktikum Backend Lanjut"),
 		ErrorHandler: newErrorHandler(logger),
+		// Batasi body 1 MB untuk mencegah DoS via payload besar
+		BodyLimit: 1 * 1024 * 1024,
 	})
 
-	middleware.Register(app, logger)
-	route.Register(app, pool, studentService)
+	middleware.Register(app, logger, GetEnv("ALLOWED_ORIGINS", ""))
+	route.Register(app, pool, deps)
 
-	// Penampung terakhir untuk URL yang tidak dikenal.
 	app.Use(func(c *fiber.Ctx) error {
-		return helper.Fail(
-			c,
-			fiber.StatusNotFound,
-			"endpoint tidak ditemukan",
-		)
+		return helper.Fail(c, fiber.StatusNotFound, "endpoint tidak ditemukan")
 	})
 
 	return app
 }
 
-// newErrorHandler adalah jaring pengaman terakhir: error yang tidak
-// tertangani di service berakhir di sini dengan format yang tetap konsisten.
 func newErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 	return func(c *fiber.Ctx, err error) error {
 		status := fiber.StatusInternalServerError
@@ -52,8 +44,7 @@ func newErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 			message = e.Message
 		}
 
-		logger.Error(
-			"unhandled_error",
+		logger.Error("unhandled_error",
 			slog.String("path", c.Path()),
 			slog.Int("status", status),
 			slog.String("error", err.Error()),
@@ -61,4 +52,4 @@ func newErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 
 		return helper.Fail(c, status, message)
 	}
-}
+}
