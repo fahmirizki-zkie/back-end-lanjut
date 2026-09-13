@@ -1,15 +1,11 @@
--- Modul 5: Authentication & Security
--- Migration 002: tambah tabel users (untuk autentikasi) dan refresh_tokens.
+
 
 -- Tabel users menyimpan akun yang bisa login ke API.
--- Berbeda dari tabel students yang merupakan resource yang dilindungi.
 CREATE TABLE IF NOT EXISTS users (
     id         SERIAL      PRIMARY KEY,
     username   VARCHAR(50) NOT NULL,
     email      VARCHAR(100) NOT NULL,
     password   VARCHAR(255) NOT NULL,
-    -- Role disiapkan sekarang, tetapi baru dipakai untuk mengatur hak akses
-    -- pada pertemuan 6. Nilai default selalu 'user' — tidak pernah dari request.
     role       VARCHAR(20) NOT NULL DEFAULT 'user',
     is_active  BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -24,8 +20,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_email_key
     ON users (LOWER(email));
 
 -- Refresh token disimpan sebagai HASH SHA-256, bukan nilai aslinya.
--- Alasannya sama seperti password: bila isi table ini bocor, penyerang
--- tetap tidak memiliki token yang dapat dipakai langsung.
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id         BIGSERIAL   PRIMARY KEY,
     user_id    INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
