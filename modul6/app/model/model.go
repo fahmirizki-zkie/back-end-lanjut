@@ -14,13 +14,6 @@ type Student struct {
 	CreatedAt time.Time `json:"created_at"`  
 }
 
-type Nilai struct {
-	ID         int           `json:"id"`
-	IDStudent  int           `json:"id_student"`
-	Matakuliah string        `json:"mata_kuliah"`
-	Nilai      float64       `json:"nilai"`
-}
-
 // Post semua filed wajib 
 type CreateStudentRequest struct {
 	Name	 string  `json:"name"`

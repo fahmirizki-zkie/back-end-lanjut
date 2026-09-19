@@ -196,7 +196,6 @@ func (r *studentPostgresRepository) FindByID(
 		ctx,
 		`SELECT id, nim, name, email, grade, is_active, created_at
 		 FROM students
-		 join nilai on students.id = nilai.id_student
 		 WHERE id = $1`,
 		id,
 	).Scan(
