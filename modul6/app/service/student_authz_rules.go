@@ -1,12 +1,10 @@
 package service
- 
+
 import (
-    "strings"
- 
-    "latihan-fiber/app/model"
-    "latihan-fiber/helper"
+	"modul6/app/model"
+	"modul6/helper"
 )
- 
+
 // CanAccessUser memutuskan apakah seseorang boleh menyentuh data user lain.
 //
 // Dua jalur yang diizinkan:
@@ -27,4 +25,3 @@ func CanAccessStudent(
 
 	return perms.Can(current.Role, anyPermission)
 }
- 

@@ -207,5 +207,3 @@ func (s *AuthService) issueTokenPair(ctx context.Context, user model.User) (mode
 		ExpiresIn:    int(s.jwt.AccessTTL().Seconds()),
 	}, nil
 }
-
-

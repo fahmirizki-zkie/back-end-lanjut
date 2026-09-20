@@ -27,9 +27,12 @@ type StudentRepository interface {
 }
 
 type ListParams struct {
-	Page    int
-	PerPage int
-	Search  string
+	Search   string
+	IsActive *bool
+	Sort     string
+	Order    string
+	Limit    int
+	Offset   int
 }
 
 type studentRepository struct {
@@ -46,8 +49,6 @@ func (r *studentRepository) FindAll(
 	ctx context.Context,
 	params ListParams,
 ) ([]model.Student, int, error) {
-
-	offset := (params.Page - 1) * params.PerPage
 
 	search := strings.TrimSpace(params.Search)
 
@@ -82,8 +83,8 @@ func (r *studentRepository) FindAll(
 			ORDER BY id
 			LIMIT $1 OFFSET $2
 			`,
-			params.PerPage,
-			offset,
+			params.Limit,
+			params.Offset,
 		)
 
 		if err != nil {
@@ -159,8 +160,8 @@ func (r *studentRepository) FindAll(
 		LIMIT $2 OFFSET $3
 		`,
 		searchPattern,
-		params.PerPage,
-		offset,
+		params.Limit,
+		params.Offset,
 	)
 
 	if err != nil {
