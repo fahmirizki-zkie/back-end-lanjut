@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("data tidak ditemukan")
-	ErrDuplicate = errors.New("data sudah ada")
+	ErrNotFound  = errors.New("student not found")
+	ErrDuplicate = errors.New("student already exists")
 )
 
 type StudentRepository interface {
@@ -27,104 +27,120 @@ type StudentRepository interface {
 }
 
 type ListParams struct {
-	Search   string
-	IsActive *bool
-	Sort     string
-	Order    string
-	Limit    int
-	Offset   int
+	Page    int
+	PerPage int
+	Search  string
 }
 
-type studentPostgresRepository struct {
+type studentRepository struct {
 	pool *pgxpool.Pool
 }
 
 func NewStudentRepository(pool *pgxpool.Pool) StudentRepository {
-	return &studentPostgresRepository{
+	return &studentRepository{
 		pool: pool,
 	}
 }
 
-// FindAll mengambil data student dengan:
-// search, filter, sorting, pagination, dan total count
-func (r *studentPostgresRepository) FindAll(
+func (r *studentRepository) FindAll(
 	ctx context.Context,
 	params ListParams,
 ) ([]model.Student, int, error) {
 
-	allowedSort := map[string]string{
-		"id":         "id",
-		"name":       "name",
-		"nim":        "nim",
-		"email":      "email",
-		"grade":      "grade",
-		"is_active":  "is_active",
-		"created_at": "created_at",
-	}
+	offset := (params.Page - 1) * params.PerPage
 
-	sortColumn, ok := allowedSort[params.Sort]
-	if !ok {
-		sortColumn = "id"
-	}
+	search := strings.TrimSpace(params.Search)
 
-	order := "ASC"
+	var (
+		students []model.Student
+		total    int
+	)
 
-	if strings.ToLower(params.Order) == "desc" {
-		order = "DESC"
-	}
+	if search == "" {
+		err := r.pool.QueryRow(
+			ctx,
+			`SELECT COUNT(*) FROM students`,
+		).Scan(&total)
 
-	where := []string{}
-	args := []any{}
+		if err != nil {
+			return nil, 0, err
+		}
 
-	if params.Search != "" {
-		args = append(args, "%"+params.Search+"%")
-
-		where = append(
-			where,
-			fmt.Sprintf("name ILIKE $%d", len(args)),
+		rows, err := r.pool.Query(
+			ctx,
+			`
+			SELECT
+				id,
+				nim,
+				name,
+				email,
+				grade,
+				is_active,
+				created_at,
+				owner_id
+			FROM students
+			ORDER BY id
+			LIMIT $1 OFFSET $2
+			`,
+			params.PerPage,
+			offset,
 		)
+
+		if err != nil {
+			return nil, 0, err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var s model.Student
+
+			err := rows.Scan(
+				&s.ID,
+				&s.NIM,
+				&s.Name,
+				&s.Email,
+				&s.Grade,
+				&s.IsActive,
+				&s.CreatedAt,
+				&s.OwnerID,
+			)
+
+			if err != nil {
+				return nil, 0, err
+			}
+
+			students = append(students, s)
+		}
+
+		if err := rows.Err(); err != nil {
+			return nil, 0, err
+		}
+
+		return students, total, nil
 	}
 
-	if params.IsActive != nil {
-		args = append(args, *params.IsActive)
+	searchPattern := "%" + search + "%"
 
-		where = append(
-			where,
-			fmt.Sprintf("is_active = $%d", len(args)),
-		)
-	}
-
-	whereSQL := ""
-
-	if len(where) > 0 {
-		whereSQL = "WHERE " + strings.Join(where, " AND ")
-	}
-
-	countQuery := fmt.Sprintf(`
+	err := r.pool.QueryRow(
+		ctx,
+		`
 		SELECT COUNT(*)
 		FROM students
-		%s
-	`, whereSQL)
+		WHERE
+			name ILIKE $1
+			OR email ILIKE $1
+			OR nim ILIKE $1
+		`,
+		searchPattern,
+	).Scan(&total)
 
-	var total int
-
-	if err := r.pool.QueryRow(
-		ctx,
-		countQuery,
-		args...,
-	).Scan(&total); err != nil {
+	if err != nil {
 		return nil, 0, err
 	}
 
-	queryArgs := append([]any{}, args...)
-
-	queryArgs = append(queryArgs, params.Limit)
-	limitParam := len(queryArgs)
-
-	queryArgs = append(queryArgs, params.Offset)
-	offsetParam := len(queryArgs)
-
-	query := fmt.Sprintf(`
+	rows, err := r.pool.Query(
+		ctx,
+		`
 		SELECT
 			id,
 			nim,
@@ -132,38 +148,30 @@ func (r *studentPostgresRepository) FindAll(
 			email,
 			grade,
 			is_active,
-			created_at
+			created_at,
+			owner_id
 		FROM students
-		%s
-		ORDER BY %s %s
-		LIMIT $%d
-		OFFSET $%d
-	`,
-		whereSQL,
-		sortColumn,
-		order,
-		limitParam,
-		offsetParam,
-	)
-
-	rows, err := r.pool.Query(
-		ctx,
-		query,
-		queryArgs...,
+		WHERE
+			name ILIKE $1
+			OR email ILIKE $1
+			OR nim ILIKE $1
+		ORDER BY id
+		LIMIT $2 OFFSET $3
+		`,
+		searchPattern,
+		params.PerPage,
+		offset,
 	)
 
 	if err != nil {
 		return nil, 0, err
 	}
-
 	defer rows.Close()
-
-	students := []model.Student{}
 
 	for rows.Next() {
 		var s model.Student
 
-		if err := rows.Scan(
+		err := rows.Scan(
 			&s.ID,
 			&s.NIM,
 			&s.Name,
@@ -171,7 +179,10 @@ func (r *studentPostgresRepository) FindAll(
 			&s.Grade,
 			&s.IsActive,
 			&s.CreatedAt,
-		); err != nil {
+			&s.OwnerID,
+		)
+
+		if err != nil {
 			return nil, 0, err
 		}
 
@@ -185,7 +196,7 @@ func (r *studentPostgresRepository) FindAll(
 	return students, total, nil
 }
 
-func (r *studentPostgresRepository) FindByID(
+func (r *studentRepository) FindByID(
 	ctx context.Context,
 	id int,
 ) (model.Student, error) {
@@ -194,9 +205,19 @@ func (r *studentPostgresRepository) FindByID(
 
 	err := r.pool.QueryRow(
 		ctx,
-		`SELECT id, nim, name, email, grade, is_active, created_at
-		 FROM students
-		 WHERE id = $1`,
+		`
+		SELECT
+			id,
+			nim,
+			name,
+			email,
+			grade,
+			is_active,
+			created_at,
+			owner_id
+		FROM students
+		WHERE id = $1
+		`,
 		id,
 	).Scan(
 		&s.ID,
@@ -206,36 +227,56 @@ func (r *studentPostgresRepository) FindByID(
 		&s.Grade,
 		&s.IsActive,
 		&s.CreatedAt,
+		&s.OwnerID,
 	)
 
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return model.Student{}, ErrNotFound
-		}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return model.Student{}, ErrNotFound
+	}
 
+	if err != nil {
 		return model.Student{}, err
 	}
 
 	return s, nil
 }
 
-func (r *studentPostgresRepository) Create(
+func (r *studentRepository) Create(
 	ctx context.Context,
 	s model.Student,
 ) (model.Student, error) {
 
 	err := r.pool.QueryRow(
 		ctx,
-		`INSERT INTO students
-			(nim, name, email, password, grade, is_active)
-		 VALUES ($1, $2, $3, $4, $5, $6)
-		 RETURNING id, nim, name, email, password, grade, is_active, created_at`,
+		`
+		INSERT INTO students (
+			nim,
+			name,
+			email,
+			password,
+			grade,
+			is_active,
+			owner_id
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING
+			id,
+			nim,
+			name,
+			email,
+			password,
+			grade,
+			is_active,
+			created_at,
+			owner_id
+		`,
 		s.NIM,
 		s.Name,
 		s.Email,
 		s.Password,
 		s.Grade,
 		s.IsActive,
+		s.OwnerID,
 	).Scan(
 		&s.ID,
 		&s.NIM,
@@ -245,13 +286,16 @@ func (r *studentPostgresRepository) Create(
 		&s.Grade,
 		&s.IsActive,
 		&s.CreatedAt,
+		&s.OwnerID,
 	)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
 
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return model.Student{}, ErrDuplicate
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return model.Student{}, ErrDuplicate
+			}
 		}
 
 		return model.Student{}, err
@@ -260,21 +304,32 @@ func (r *studentPostgresRepository) Create(
 	return s, nil
 }
 
-func (r *studentPostgresRepository) Update(
+func (r *studentRepository) Update(
 	ctx context.Context,
 	s model.Student,
 ) (model.Student, error) {
 
 	err := r.pool.QueryRow(
 		ctx,
-		`UPDATE students
-		 SET nim = $1,
-		     name = $2,
-		     email = $3,
-		     grade = $4,
-		     is_active = $5
-		 WHERE id = $6
-		 RETURNING id, nim, name, email, grade, is_active, created_at`,
+		`
+		UPDATE students
+		SET
+			nim = $1,
+			name = $2,
+			email = $3,
+			grade = $4,
+			is_active = $5
+		WHERE id = $6
+		RETURNING
+			id,
+			nim,
+			name,
+			email,
+			grade,
+			is_active,
+			created_at,
+			owner_id
+		`,
 		s.NIM,
 		s.Name,
 		s.Email,
@@ -289,17 +344,20 @@ func (r *studentPostgresRepository) Update(
 		&s.Grade,
 		&s.IsActive,
 		&s.CreatedAt,
+		&s.OwnerID,
 	)
 
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return model.Student{}, ErrNotFound
-		}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return model.Student{}, ErrNotFound
+	}
 
+	if err != nil {
 		var pgErr *pgconn.PgError
 
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return model.Student{}, ErrDuplicate
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return model.Student{}, ErrDuplicate
+			}
 		}
 
 		return model.Student{}, err
@@ -308,7 +366,7 @@ func (r *studentPostgresRepository) Update(
 	return s, nil
 }
 
-func (r *studentPostgresRepository) Delete(
+func (r *studentRepository) Delete(
 	ctx context.Context,
 	id int,
 ) error {
@@ -328,4 +386,8 @@ func (r *studentPostgresRepository) Delete(
 	}
 
 	return nil
+}
+
+func (r *studentRepository) String() string {
+	return fmt.Sprintf("studentRepository")
 }

@@ -4,14 +4,15 @@ import "time"
 
 
 type Student struct {
-	ID        int    `json:"id"`
+	ID        int       `json:"id"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
 	NIM       string    `json:"nim"`
 	Password  string    `json:"-"`
-	Grade	  float64   `json:"grade"`
+	Grade     float64   `json:"grade"`
 	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`  
+	CreatedAt time.Time `json:"created_at"`
+	OwnerID   int       `json:"owner_id"`
 }
 
 // Post semua filed wajib 
