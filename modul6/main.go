@@ -9,12 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	"modul4/app/repository"
-	"modul4/app/service"
-	"modul4/config"
-	"modul4/database"
-	"modul4/helper"
-	"modul4/route"
+	"modul6/app/repository"
+	"modul6/app/service"
+	"modul6/config"
+	"modul6/database"
+	"modul6/helper"
+	"modul6/route"
 )
 
 // minSecretLength panjang minimum JWT_SECRET (32 karakter = 256 bit)
@@ -57,6 +57,36 @@ func main() {
 	userRepository := repository.NewUserRepository(pool)
 	tokenRepository := repository.NewTokenRepository(pool)
 
+	    userRepository := repository.NewUserRepository(pool)
+    tokenRepository := repository.NewTokenRepository(pool)
+    roleRepository := repository.NewRoleRepository(pool)
+ 
+    // Pemetaan role ke permission dibaca SEKALI saat aplikasi menyala.
+    // Konsekuensinya: perubahan hak akses di database baru berlaku setelah
+    // aplikasi dijalankan ulang. Itu keputusan sadar, bukan kelalaian.
+    rawPermissions, err := roleRepository.LoadPermissions(context.Background())
+    if err != nil {
+        logger.Error("gagal memuat permission", slog.String("error", err.Error()))
+        os.Exit(1)
+    }
+    permissions := helper.NewPermissionSet(rawPermissions)
+    logger.Info("permission dimuat", slog.Any("roles", permissions.KnownRoles()))
+ 
+    userService := service.NewUserService(userRepository, permissions)
+    authService := service.NewAuthService(
+        userRepository, tokenRepository, jwtManager, permissions,
+        time.Duration(config.GetEnvInt("JWT_REFRESH_TTL_DAYS", 7))*24*time.Hour,
+    )
+ 
+    app := config.NewApp(logger, route.Dependencies{
+        Pool:        pool,
+        JWT:         jwtManager,
+        Permissions: permissions,
+        UserService: userService,
+        AuthService: authService,
+    })
+
+
 	studentService := service.NewStudentService(studentRepository)
 	authService := service.NewAuthService(
 		userRepository, tokenRepository, jwtManager,
@@ -91,4 +121,4 @@ func main() {
 	}
 
 	log.Println("server berhenti dengan rapi")
-}
+}

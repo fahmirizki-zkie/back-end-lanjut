@@ -15,3 +15,10 @@ ON students (nim);
 
 CREATE INDEX IF NOT EXISTS students_name_idx
 ON students (name);
+
+-- owner_id mengacu pada users.id.
+-- Tabel users dibuat terlebih dahulu,
+-- sehingga migration ini hanya bisa dijalankan setelah tabel users dibuat.
+ALTER TABLE students
+ADD COLUMN IF NOT EXISTS owner_id INTEGER
+    REFERENCES users(id);
