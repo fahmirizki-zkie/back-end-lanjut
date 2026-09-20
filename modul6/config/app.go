@@ -6,9 +6,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"modul4/helper"
-	"modul4/middleware"
-	"modul4/route"
+	"modul6/helper"
+	"modul6/middleware"
+	"modul6/route"
 )
 
 func NewApp(
@@ -52,4 +52,4 @@ func newErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 
 		return helper.Fail(c, status, message)
 	}
-}
+}

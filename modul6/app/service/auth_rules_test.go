@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"modul4/app/model"
+	"modul6/app/model"
 )
 
 func TestCheckPasswordStrength(t *testing.T) {

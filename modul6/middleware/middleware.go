@@ -11,7 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 
-	"modul4/helper"
+	"modul6/helper"
 )
 
 // Register memasang seluruh middleware global. allowedOrigins dari env ALLOWED_ORIGINS.

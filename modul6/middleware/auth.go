@@ -8,7 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 
-	"modul4/helper"
+	"modul6/helper"
 )
 
 // RequireAuth memeriksa Bearer token pada header Authorization.

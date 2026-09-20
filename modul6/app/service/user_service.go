@@ -7,9 +7,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"modul4/app/model"
-	"modul4/app/repository"
-	"modul4/helper"
+	"modul6/app/model"
+	"modul6/app/repository"
+	"modul6/helper"
 )
 
 // StudentService memegang dua tanggung jawab sekaligus pada struktur baku

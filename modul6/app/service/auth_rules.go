@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"modul4/app/model"
+	"modul6/app/model"
 )
 
 const minPasswordLength = 8

@@ -1,5 +1,3 @@
-
-
 -- Tabel users menyimpan akun yang bisa login ke API.
 CREATE TABLE IF NOT EXISTS users (
     id         SERIAL      PRIMARY KEY,

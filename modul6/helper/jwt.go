@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"modul4/app/model"
+	"modul6/app/model"
 )
 
 var (

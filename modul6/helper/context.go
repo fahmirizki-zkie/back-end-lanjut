@@ -3,7 +3,7 @@ package helper
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"modul4/app/model"
+	"modul6/app/model"
 )
 
 // LocalsAuthUser adalah kunci untuk menyimpan/membaca identitas user di Fiber context

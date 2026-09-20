@@ -1,4 +1,4 @@
-module modul4
+module modul6
 
 go 1.26.5
 
