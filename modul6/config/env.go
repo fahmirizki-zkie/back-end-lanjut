@@ -44,4 +44,4 @@ func GetEnvInt(key string, fallback int) int {
 		}
 	}
 	return fallback
-}
+}
