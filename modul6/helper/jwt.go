@@ -13,7 +13,7 @@ import (
 
 var (
 	ErrInvalidToken = errors.New("token tidak valid")
-	ErrExpiredToken  = errors.New("token sudah kedaluwarsa")
+	ErrExpiredToken = errors.New("token sudah kedaluwarsa")
 )
 
 // accessClaims berisi payload access token: identitas user + claims bawaan JWT
