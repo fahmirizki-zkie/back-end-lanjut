@@ -16,6 +16,15 @@ type UserRepository interface {
 	Create(ctx context.Context, u model.User) (model.User, error)
 	FindByID(ctx context.Context, id int) (model.User, error)
 	FindByUsername(ctx context.Context, username string) (model.User, error)
+	FindAfterCursor(ctx context.Context, q model.CursorQuery) ([]model.User, error)
+}
+
+const userColumns = "id, username, email, password, role, is_active, created_at"
+
+func scanUser(row pgx.Row) (model.User, error) {
+	var u model.User
+	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.Password, &u.Role, &u.IsActive, &u.CreatedAt)
+	return u, err
 }
 
 type userPostgresRepository struct {
@@ -75,4 +84,49 @@ func (r *userPostgresRepository) FindByUsername(ctx context.Context, username st
 		return model.User{}, fmt.Errorf("mengambil user: %w", err)
 	}
 	return u, nil
+}
+
+// FindAfterCursor mengambil satu halaman memakai keyset pagination.
+// [Perbaikan Kesalahan #8]: di modul tertulis ORDER BY created_at ASC, id ASC,
+// padahal index dan klausul pagination menuntut urutan dari yang terbaru (DESC).
+func (r *userPostgresRepository) FindAfterCursor(
+	ctx context.Context, q model.CursorQuery,
+) ([]model.User, error) {
+	args := []any{}
+	where := " WHERE 1 = 1"
+	if q.Search != "" {
+		args = append(args, "%"+q.Search+"%")
+		where += fmt.Sprintf(" AND username ILIKE $%d", len(args))
+	}
+	if q.IsActive != nil {
+		args = append(args, *q.IsActive)
+		where += fmt.Sprintf(" AND is_active = $%d", len(args))
+	}
+	if q.After != nil {
+		args = append(args, q.After.CreatedAt, q.After.ID)
+		where += fmt.Sprintf(" AND (created_at, id) < ($%d, $%d)",
+			len(args)-1, len(args))
+	}
+	args = append(args, q.Limit+1)
+	query := fmt.Sprintf(
+		"SELECT %s FROM users%s ORDER BY created_at DESC, id DESC LIMIT $%d",
+		userColumns, where, len(args))
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("mengambil daftar user: %w", err)
+	}
+	defer rows.Close()
+
+	result := []model.User{}
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, fmt.Errorf("membaca row user: %w", err)
+		}
+		result = append(result, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("membaca hasil query: %w", err)
+	}
+	return result, nil
 }

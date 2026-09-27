@@ -51,16 +51,12 @@ func TestApplyPatch(t *testing.T) {
 
 	inactive := false
 
-	result, errs := ApplyPatch(
+	result := ApplyPatch(
 		initial,
 		model.UpdateStudentRequest{
 			IsActive: &inactive,
 		},
 	)
-
-	if len(errs) != 0 {
-		t.Fatalf("tidak seharusnya ada error: %v", errs)
-	}
 
 	if result.IsActive {
 		t.Error("is_active seharusnya berubah menjadi false")

@@ -54,45 +54,27 @@ func ValidateReplace(req model.ReplaceStudentRequest) map[string]string {
 }
 
 // ApplyPatch menyalin field yang dikirim ke data yang sudah ada.
-// Field yang bernilai nil dibiarkan apa adanya.
+// Pemeriksaan format sudah ditangani oleh tag validator.
 func ApplyPatch(
 	current model.Student, req model.UpdateStudentRequest,
-) (model.Student, map[string]string) {
-	errs := map[string]string{}
-
+) model.Student {
 	if req.Name != nil {
-		if strings.TrimSpace(*req.Name) == "" {
-			errs["name"] = "tidak boleh kosong"
-		} else {
-			current.Name = strings.TrimSpace(*req.Name)
-		}
+		current.Name = strings.TrimSpace(*req.Name)
 	}
-
 	if req.Email != nil {
-		if !isValidEmail(*req.Email) {
-			errs["email"] = "format email tidak valid"
-		} else {
-			current.Email = strings.TrimSpace(*req.Email)
-		}
+		current.Email = strings.TrimSpace(*req.Email)
 	}
-
 	if req.NIM != nil {
-		if strings.TrimSpace(*req.NIM) == "" {
-			errs["nim"] = "tidak boleh kosong"
-		} else {
-			current.NIM = strings.TrimSpace(*req.NIM)
-		}
+		current.NIM = strings.TrimSpace(*req.NIM)
 	}
-
 	if req.Grade != nil {
 		current.Grade = *req.Grade
 	}
-
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
 
-	return current, errs
+	return current
 }
 
 // IsEmptyPatch menandai permintaan PATCH yang tidak mengubah apa pun.

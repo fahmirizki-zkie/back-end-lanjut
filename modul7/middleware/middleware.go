@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -36,7 +37,6 @@ func corsPolicy(allowedOrigins string) fiber.Handler {
 }
 
 // RequestLogger mencatat setiap request ke structured log
-// RequestLogger mencatat setiap request ke structured log
 func RequestLogger(logger *slog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		start := time.Now()
@@ -44,11 +44,27 @@ func RequestLogger(logger *slog.Logger) fiber.Handler {
 
 		requestID, _ := c.Locals("requestid").(string)
 
+		// Sejak handler mengembalikan error alih-alih menulis response sendiri,
+		// status pada c.Response() BELUM terisi ketika baris ini dijalankan:
+		// ErrorHandler baru berjalan setelah seluruh rangkaian middleware selesai.
+		// Tanpa koreksi di bawah, setiap kegagalan tercatat sebagai 200.
+		status := c.Response().StatusCode()
+		if err != nil {
+			var appErr *helper.AppError
+			if errors.As(err, &appErr) {
+				status = appErr.Status
+			} else {
+				status = fiber.StatusInternalServerError
+			}
+		}
+
+		// [Perbaikan Kesalahan #4]: di modul tertulis c.Response().StatusCode() pada slog.Int("status",...),
+		// padahal status sudah dihitung ulang di atas. Gunakan variabel `status` yang sudah benar.
 		attrs := []any{
 			slog.String("request_id", requestID),
 			slog.String("method", c.Method()),
 			slog.String("path", c.Path()),
-			slog.Int("status", c.Response().StatusCode()),
+			slog.Int("status", status),
 			slog.Duration("duration", time.Since(start)),
 			slog.String("ip", c.IP()),
 		}
@@ -80,8 +96,7 @@ func RequireJSON(c *fiber.Ctx) error {
 	if methodsWithBody[c.Method()] {
 		ct := c.Get("Content-Type")
 		if !strings.HasPrefix(ct, fiber.MIMEApplicationJSON) {
-			return helper.Fail(c, fiber.StatusUnsupportedMediaType,
-				"Content-Type harus application/json")
+			return helper.UnsupportedMediaType("Content-Type harus application/json")
 		}
 	}
 	return c.Next()

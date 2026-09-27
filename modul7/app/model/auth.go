@@ -4,14 +4,17 @@ import "time"
 
 // RegisterRequest — tanpa field Role untuk mencegah mass assignment
 type RegisterRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Username string `json:"username" validate:"required,min=3,max=30,username"`
+	Email    string `json:"email"    validate:"required,email,max=120"`
+	Password string `json:"password" validate:"required,max=72,strongpassword"`
 }
 
+// max=72 pada password bukan pilihan bebas: bcrypt hanya memproses 72 byte
+// pertama dan MENGABAIKAN sisanya tanpa peringatan.
+
 type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username" validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 type RefreshRequest struct {
@@ -41,15 +44,4 @@ type AuthUser struct {
 	UserID   int    `json:"user_id"`
 	Username string `json:"username"`
 	Role     string `json:"role"`
-}
-
-// User adalah entitas tabel users
-type User struct {
-	ID        int       `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Password  string    `json:"-"` // tidak pernah dikirim ke client
-	Role      string    `json:"role"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
 }
