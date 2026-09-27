@@ -56,7 +56,9 @@ ON CONFLICT DO NOTHING;
 -- Kunci column role pada students agar hanya berisi role yang dikenal.
 -- Sebelumnya column ini VARCHAR biasa: apa pun bisa masuk.
 -- ---------------------------------------------------------------
+ALTER TABLE students ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'student';
 UPDATE students SET role = 'student' WHERE role NOT IN (SELECT name FROM roles);
+
  
 ALTER TABLE students DROP CONSTRAINT IF EXISTS students_role_fkey;
 ALTER TABLE students
