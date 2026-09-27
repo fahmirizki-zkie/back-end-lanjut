@@ -34,6 +34,11 @@ func (s *StudentService) List(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
 
+	format, err := helper.Negotiate(c, helper.FormatJSON, helper.FormatCSV)
+	if err != nil {
+		return err
+	}
+
 	q, err := helper.ParseCursorQuery(c)
 	if err != nil {
 		return err
@@ -47,6 +52,10 @@ func (s *StudentService) List(c *fiber.Ctx) error {
 	hasMore := len(students) > q.Limit
 	if hasMore {
 		students = students[:q.Limit]
+	}
+
+	if format == helper.FormatCSV {
+		return helper.WriteStudentsCSV(c, students)
 	}
 
 	var nextCursor string
