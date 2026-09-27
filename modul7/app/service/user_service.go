@@ -34,31 +34,35 @@ func (s *StudentService) List(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
 
-	q := helper.ParseListQuery(c)
-
-	params := repository.ListParams{
-		Search:   q.Search,
-		IsActive: q.IsActive,
-		Sort:     q.Sort,
-		Order:    q.Order,
-		Limit:    q.Limit,
-		Offset:   (q.Page - 1) * q.Limit,
+	q, err := helper.ParseCursorQuery(c)
+	if err != nil {
+		return err
 	}
 
-	students, total, err := s.repo.FindAll(ctx, params)
+	students, err := s.repo.FindAfterCursor(ctx, q)
 	if err != nil {
 		return helper.Internal(err)
 	}
 
-	return helper.SuccessList(
+	hasMore := len(students) > q.Limit
+	if hasMore {
+		students = students[:q.Limit]
+	}
+
+	var nextCursor string
+	if hasMore && len(students) > 0 {
+		last := students[len(students)-1]
+		nextCursor = helper.EncodeCursor(last.CreatedAt, last.ID)
+	}
+
+	return helper.SuccessCursor(
 		c,
 		"daftar student berhasil diambil",
 		students,
-		&model.Meta{
-			Page:      q.Page,
-			Limit:     q.Limit,
-			Total:     total,
-			TotalPage: CountTotalPages(total, q.Limit),
+		&model.CursorMeta{
+			Limit:      q.Limit,
+			NextCursor: nextCursor,
+			HasMore:    hasMore,
 		},
 	)
 }

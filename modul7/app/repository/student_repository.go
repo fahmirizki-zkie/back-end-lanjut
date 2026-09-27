@@ -21,10 +21,12 @@ var (
 type StudentRepository interface {
 	FindAll(ctx context.Context, params ListParams) ([]model.Student, int, error)
 	FindByID(ctx context.Context, id int) (model.Student, error)
+	FindAfterCursor(ctx context.Context, q model.CursorQuery) ([]model.Student, error)
 	Create(ctx context.Context, s model.Student) (model.Student, error)
 	Update(ctx context.Context, s model.Student) (model.Student, error)
 	Delete(ctx context.Context, id int) error
 }
+
 
 type ListParams struct {
 	Search   string
@@ -196,6 +198,73 @@ func (r *studentRepository) FindAll(
 
 	return students, total, nil
 }
+
+func (r *studentRepository) FindAfterCursor(
+	ctx context.Context,
+	q model.CursorQuery,
+) ([]model.Student, error) {
+	args := []any{}
+	where := " WHERE 1 = 1"
+	if q.Search != "" {
+		args = append(args, "%"+q.Search+"%")
+		where += fmt.Sprintf(" AND (name ILIKE $%d OR email ILIKE $%d OR nim ILIKE $%d)", len(args), len(args), len(args))
+	}
+	if q.IsActive != nil {
+		args = append(args, *q.IsActive)
+		where += fmt.Sprintf(" AND is_active = $%d", len(args))
+	}
+	if q.After != nil {
+		args = append(args, q.After.CreatedAt, q.After.ID)
+		where += fmt.Sprintf(" AND (created_at, id) < ($%d, $%d)", len(args)-1, len(args))
+	}
+	args = append(args, q.Limit+1)
+	query := fmt.Sprintf(
+		`SELECT
+			id,
+			nim,
+			name,
+			email,
+			grade,
+			is_active,
+			created_at,
+			owner_id
+		FROM students%s
+		ORDER BY created_at DESC, id DESC
+		LIMIT $%d`,
+		where, len(args),
+	)
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("mengambil daftar student: %w", err)
+	}
+	defer rows.Close()
+
+	result := []model.Student{}
+	for rows.Next() {
+		var s model.Student
+		err := rows.Scan(
+			&s.ID,
+			&s.NIM,
+			&s.Name,
+			&s.Email,
+			&s.Grade,
+			&s.IsActive,
+			&s.CreatedAt,
+			&s.OwnerID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("membaca row student: %w", err)
+		}
+		result = append(result, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("membaca hasil query: %w", err)
+	}
+
+	return result, nil
+}
+
 
 func (r *studentRepository) FindByID(
 	ctx context.Context,
