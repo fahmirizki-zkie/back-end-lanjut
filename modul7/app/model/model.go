@@ -18,7 +18,7 @@ type Student struct {
 type CreateStudentRequest struct {
 	Name     string  `json:"name" validate:"required,min=2,max=100"`
 	Email    string  `json:"email" validate:"required,email,max=120"`
-	NIM      string  `json:"nim" validate:"required,min=5,max=20"`
+	NIM      string  `json:"nim" validate:"required,nim"`
 	Grade    float64 `json:"grade" validate:"gte=0,lte=100"`
 	Password string  `json:"password" validate:"required,min=8,max=72,nospace"`
 }
@@ -27,7 +27,7 @@ type CreateStudentRequest struct {
 type ReplaceStudentRequest struct {
 	Name     string  `json:"name" validate:"required,min=2,max=100"`
 	Email    string  `json:"email" validate:"required,email,max=120"`
-	NIM      string  `json:"nim" validate:"required,min=5,max=20"`
+	NIM      string  `json:"nim" validate:"required,nim"`
 	Grade    float64 `json:"grade" validate:"gte=0,lte=100"`
 	IsActive bool    `json:"is_active"`
 }
@@ -36,7 +36,7 @@ type ReplaceStudentRequest struct {
 type UpdateStudentRequest struct {
 	Name     *string  `json:"name,omitempty" validate:"omitnil,min=2,max=100"`
 	Email    *string  `json:"email,omitempty" validate:"omitnil,email,max=120"`
-	NIM      *string  `json:"nim,omitempty" validate:"omitnil,min=5,max=20"`
+	NIM      *string  `json:"nim,omitempty" validate:"omitnil,nim"`
 	Grade    *float64 `json:"grade,omitempty" validate:"omitnil,gte=0,lte=100"`
 	IsActive *bool    `json:"is_active,omitempty"`
 }

@@ -8,50 +8,7 @@ import (
 
 // File ini berisi business rules MURNI: tidak menyentuh fiber.Ctx,
 // tidak menyentuh database, dan tidak tahu apa pun tentang HTTP.
-
-// ValidateCreate memeriksa isi permintaan pembuatan student.
-// Mengembalikan peta berisi field yang bermasalah; kosong berarti lolos.
-func ValidateCreate(req model.CreateStudentRequest) map[string]string {
-	errs := map[string]string{}
-
-	if strings.TrimSpace(req.Name) == "" {
-		errs["name"] = "wajib diisi"
-	}
-
-	if strings.TrimSpace(req.NIM) == "" {
-		errs["nim"] = "wajib diisi"
-	}
-
-	if !isValidEmail(req.Email) {
-		errs["email"] = "format email tidak valid"
-	}
-
-	if len(req.Password) < 8 {
-		errs["password"] = "minimal 8 karakter"
-	}
-
-	return errs
-}
-
-// ValidateReplace memeriksa isi permintaan PUT.
-// Seluruh field wajib ada karena PUT mengganti isi secara keseluruhan.
-func ValidateReplace(req model.ReplaceStudentRequest) map[string]string {
-	errs := map[string]string{}
-
-	if strings.TrimSpace(req.Name) == "" {
-		errs["name"] = "wajib diisi pada PUT"
-	}
-
-	if strings.TrimSpace(req.NIM) == "" {
-		errs["nim"] = "wajib diisi pada PUT"
-	}
-
-	if !isValidEmail(req.Email) {
-		errs["email"] = "wajib diisi dan berformat email pada PUT"
-	}
-
-	return errs
-}
+// Seluruh validasi format field sudah dipindahkan ke tag deklaratif pada struct.
 
 // ApplyPatch menyalin field yang dikirim ke data yang sudah ada.
 // Pemeriksaan format sudah ditangani oleh tag validator.

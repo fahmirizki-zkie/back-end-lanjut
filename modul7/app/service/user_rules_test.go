@@ -4,38 +4,58 @@ import (
 	"testing"
 
 	"modul6/app/model"
+	"modul6/helper"
 )
 
 // Pengujian tidak menyalakan server,
 // tidak menyentuh database,
 // dan tidak membuat fiber.Ctx.
 
-func TestValidateCreate(t *testing.T) {
+func TestValidateCreateDeclarative(t *testing.T) {
 	req := model.CreateStudentRequest{
 		Name:     "",
 		Email:    "email-salah",
-		NIM:      "",
+		NIM:      "123", // kurang dari 9 digit (tag nim)
 		Password: "123",
 	}
 
-	errs := ValidateCreate(req)
-
-	if len(errs) != 4 {
-		t.Errorf("harap 4 error validasi, dapat %d: %v", len(errs), errs)
+	errs := helper.ValidateStruct(req)
+	if len(errs) == 0 {
+		t.Errorf("diharapkan error validasi, tapi tidak ada")
+	}
+	if _, ok := errs["name"]; !ok {
+		t.Errorf("diharapkan error pada name")
+	}
+	if _, ok := errs["email"]; !ok {
+		t.Errorf("diharapkan error pada email")
+	}
+	if _, ok := errs["nim"]; !ok {
+		t.Errorf("diharapkan error pada nim")
+	}
+	if _, ok := errs["password"]; !ok {
+		t.Errorf("diharapkan error pada password")
 	}
 }
 
-func TestValidateReplace(t *testing.T) {
+func TestValidateReplaceDeclarative(t *testing.T) {
 	req := model.ReplaceStudentRequest{
 		Name:  "",
 		Email: "email-salah",
-		NIM:   "",
+		NIM:   "abc", // bukan angka
 	}
 
-	errs := ValidateReplace(req)
-
-	if len(errs) != 3 {
-		t.Errorf("harap 3 error validasi, dapat %d: %v", len(errs), errs)
+	errs := helper.ValidateStruct(req)
+	if len(errs) == 0 {
+		t.Errorf("diharapkan error validasi, tapi tidak ada")
+	}
+	if _, ok := errs["name"]; !ok {
+		t.Errorf("diharapkan error pada name")
+	}
+	if _, ok := errs["email"]; !ok {
+		t.Errorf("diharapkan error pada email")
+	}
+	if _, ok := errs["nim"]; !ok {
+		t.Errorf("diharapkan error pada nim")
 	}
 }
 

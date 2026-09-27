@@ -34,13 +34,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	connString := "postgres://" +
-		cfg.DBUser + ":" +
-		cfg.DBPassword + "@" +
-		cfg.DBHost + ":" +
-		cfg.DBPort + "/" +
-		cfg.DBName +
-		"?sslmode=" + cfg.DBSSLMode
+	connString := config.GetEnv("DB_DSN", "")
+	if connString == "" {
+		connString = "postgres://" +
+			cfg.DBUser + ":" +
+			cfg.DBPassword + "@" +
+			cfg.DBHost + ":" +
+			cfg.DBPort + "/" +
+			cfg.DBName +
+			"?sslmode=" + cfg.DBSSLMode
+	}
 
 	pool, err := database.NewPostgresPool(
 		context.Background(),

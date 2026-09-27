@@ -53,6 +53,20 @@ func newValidator() *validator.Validate {
 		return passwordStrength(fl.Field().String()) == ""
 	})
 
+	// Custom validation untuk domain data: format NIM (hanya angka, panjang 9-18 digit)
+	_ = v.RegisterValidation("nim", func(fl validator.FieldLevel) bool {
+		val := fl.Field().String()
+		if len(val) < 9 || len(val) > 18 {
+			return false
+		}
+		for _, r := range val {
+			if !unicode.IsDigit(r) {
+				return false
+			}
+		}
+		return true
+	})
+
 	return v
 }
 
@@ -149,6 +163,8 @@ func messageFor(fe validator.FieldError) string {
 		return "tidak boleh mengandung spasi"
 	case "username":
 		return "hanya boleh huruf, angka, titik, dan garis bawah"
+	case "nim":
+		return "harus berupa angka 9 sampai 18 digit"
 	case "strongpassword":
 		// Type assertion memakai bentuk DUA nilai, bukan satu. Bentuk
 		// satu nilai akan panic bila suatu saat tag ini terpasang pada
