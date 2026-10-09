@@ -1,0 +1,24 @@
+# Environment variables
+.env
+
+# Postman local testing files
+postman/
+
+# Binary outputs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+tmp/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
