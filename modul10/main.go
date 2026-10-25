@@ -85,6 +85,12 @@ func main() {
 	tokenRepository := repository.NewTokenRepository(pool)
 	roleRepository := repository.NewRoleRepository(pool)
 	courseRepository := repository.NewCourseRepository(pool)
+	reviewRepository := repository.NewReviewRepository(mongoDB)
+
+	if err := reviewRepository.EnsureIndexes(context.Background()); err != nil {
+		logger.Error("gagal membuat index MongoDB", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 
 	// Pemetaan role ke permission dibaca sekali saat aplikasi menyala.
 	rawPermissions, err := roleRepository.LoadPermissions(
@@ -122,6 +128,7 @@ func main() {
 
 	txManager := repository.NewTxManager(pool)
 	courseService := service.NewCourseService(courseRepository, txManager)
+	reviewService := service.NewReviewService(reviewRepository, courseRepository, permissions)
 
 	// App
 	app := config.NewApp(
@@ -131,6 +138,7 @@ func main() {
 			StudentService: studentService,
 			AuthService:    authService,
 			CourseService:  courseService,
+			ReviewService:  reviewService,
 			Mongo:          mongoClient,
 			JWT:            jwtManager,
 			Permissions:    permissions,
