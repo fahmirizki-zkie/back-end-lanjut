@@ -29,6 +29,7 @@ type CourseRepository interface {
 	DecrementEnrolled(ctx context.Context, courseID int) (model.Course, error)
 	DeleteEnrollment(ctx context.Context, courseID, userID int) error
 	InsertEnrollment(ctx context.Context, courseID, userID int) error
+	LockCourses(ctx context.Context, ids ...int) error
 }
 
 const courseColumns = `id, code, name, credits, quota, enrolled_count, version, created_at`
@@ -192,6 +193,33 @@ func (r *coursePostgresRepository) InsertEnrollment(ctx context.Context, courseI
 			return ErrDuplicate
 		}
 		return fmt.Errorf("mencatat pendaftaran: %w", err)
+	}
+	return nil
+}
+
+// LockCourses mengunci beberapa kelas sekaligus, SELALU dalam urutan id
+// menaik, apa pun urutan argumennya.
+//
+// Urutan yang seragam inilah yang mencegah deadlock: bila setiap
+// transaction mengambil kunci dengan urutan yang sama, tidak mungkin ada
+// dua transaction yang saling menunggu kunci milik satu sama lain.
+func (r *coursePostgresRepository) LockCourses(ctx context.Context, ids ...int) error {
+	rows, err := r.db.Query(ctx,
+		"SELECT id FROM courses WHERE id = ANY($1) ORDER BY id FOR UPDATE", ids)
+	if err != nil {
+		return fmt.Errorf("mengunci kelas: %w", err)
+	}
+	defer rows.Close()
+
+	found := 0
+	for rows.Next() {
+		found++
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("mengunci kelas: %w", err)
+	}
+	if found != len(ids) {
+		return ErrNotFound
 	}
 	return nil
 }
