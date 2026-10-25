@@ -68,6 +68,7 @@ func main() {
 	userRepository := repository.NewUserRepository(pool)
 	tokenRepository := repository.NewTokenRepository(pool)
 	roleRepository := repository.NewRoleRepository(pool)
+	courseRepository := repository.NewCourseRepository(pool)
 
 	// Pemetaan role ke permission dibaca sekali saat aplikasi menyala.
 	rawPermissions, err := roleRepository.LoadPermissions(
@@ -103,6 +104,8 @@ func main() {
 		)*24*time.Hour,
 	)
 
+	courseService := service.NewCourseService(courseRepository)
+
 	// App
 	app := config.NewApp(
 		logger,
@@ -110,6 +113,7 @@ func main() {
 		route.Dependencies{
 			StudentService: studentService,
 			AuthService:    authService,
+			CourseService:  courseService,
 			JWT:            jwtManager,
 			Permissions:    permissions,
 		},

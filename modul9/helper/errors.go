@@ -48,6 +48,10 @@ func (e *AppError) Error() string {
 // untuk menemukan error asli di bawahnya.
 func (e *AppError) Unwrap() error { return e.cause }
 
+func NewError(status int, code, message string) *AppError {
+	return &AppError{Status: status, Code: code, Message: message}
+}
+
 func BadRequest(message string) *AppError {
 	return &AppError{Status: fiber.StatusBadRequest, Code: CodeBadRequest, Message: message}
 }

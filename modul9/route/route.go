@@ -16,6 +16,7 @@ import (
 type Dependencies struct {
 	StudentService *service.StudentService
 	AuthService    *service.AuthService
+	CourseService  *service.CourseService
 	JWT            *helper.JWTManager
 	Permissions    *helper.PermissionSet
 }
@@ -67,6 +68,16 @@ func Register(app *fiber.App, pool *pgxpool.Pool, deps Dependencies) {
 	students.Get("/:id", deps.StudentService.Get)
 	students.Put("/:id", deps.StudentService.Replace)
 	students.Patch("/:id", deps.StudentService.Patch)
+
+	// --- kelas dan KRS ---
+	courses := api.Group("/courses",
+		middleware.RequireJSON,
+		middleware.RequireAuth(deps.JWT))
+	// "/mine" didaftarkan SEBELUM "/:id". Fiber mencocokkan route sesuai
+	// urutan pendaftaran; bila dibalik, "mine" akan dianggap sebagai :id.
+	courses.Get("/", deps.CourseService.List)
+	courses.Get("/mine", deps.CourseService.Mine)
+	courses.Get("/:id", deps.CourseService.Get)
 }
 
 // healthCheck mengecek koneksi database.
