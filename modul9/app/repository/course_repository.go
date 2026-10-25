@@ -30,6 +30,7 @@ type CourseRepository interface {
 	DeleteEnrollment(ctx context.Context, courseID, userID int) error
 	InsertEnrollment(ctx context.Context, courseID, userID int) error
 	LockCourses(ctx context.Context, ids ...int) error
+	UpdateQuota(ctx context.Context, id, quota, version int) (model.Course, error)
 }
 
 const courseColumns = `id, code, name, credits, quota, enrolled_count, version, created_at`
@@ -222,4 +223,38 @@ func (r *coursePostgresRepository) LockCourses(ctx context.Context, ids ...int) 
 		return ErrNotFound
 	}
 	return nil
+}
+
+// UpdateQuota menerapkan optimistic locking.
+//
+// Tidak ada kunci yang dipegang selama admin mengisi form. Sebagai gantinya,
+// UPDATE hanya berhasil bila version di database masih sama dengan version
+// yang dikirim client. Bila sudah berubah, berarti ada orang lain yang
+// menyimpan lebih dulu, dan perubahan ini ditolak alih-alih menimpanya.
+//
+// Syarat kuota tidak boleh lebih kecil dari jumlah peserta juga ditulis di
+// dalam WHERE, agar pemeriksaan dan perubahan terjadi dalam satu langkah.
+//
+// Perbaikan: tambahkan 'version = version + 1' agar kolom version bertambah saat berhasil.
+func (r *coursePostgresRepository) UpdateQuota(ctx context.Context, id, quota, version int) (model.Course, error) {
+	c, err := scanCourse(r.db.QueryRow(ctx,
+		`UPDATE courses SET quota = $1, version = version + 1
+		 WHERE id = $2 AND version = $3 AND $1 >= enrolled_count
+		 RETURNING `+courseColumns, quota, id, version))
+	if err == nil {
+		return c, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return model.Course{}, fmt.Errorf("mengubah kuota: %w", err)
+	}
+
+	current, findErr := r.FindByID(ctx, id)
+	if findErr != nil {
+		return model.Course{}, findErr
+	}
+
+	if current.Version != version {
+		return model.Course{}, ErrVersionConflict
+	}
+	return model.Course{}, ErrQuotaBelowFilled
 }

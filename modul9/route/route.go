@@ -80,6 +80,9 @@ func Register(app *fiber.App, pool *pgxpool.Pool, deps Dependencies) {
 	courses.Get("/:id", deps.CourseService.Get)
 	courses.Post("/:id/enroll", deps.CourseService.Enroll)
 	courses.Delete("/:id/enroll", deps.CourseService.Drop)
+	courses.Patch("/:id",
+		middleware.RequirePermission(perms, "course:manage"),
+		deps.CourseService.UpdateQuota)
 
 	enrollments := api.Group("/enrollments",
 		middleware.RequireJSON,
