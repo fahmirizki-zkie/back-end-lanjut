@@ -104,7 +104,8 @@ func main() {
 		)*24*time.Hour,
 	)
 
-	courseService := service.NewCourseService(courseRepository)
+	txManager := repository.NewTxManager(pool)
+	courseService := service.NewCourseService(courseRepository, txManager)
 
 	// App
 	app := config.NewApp(
