@@ -53,6 +53,10 @@ func (m *JWTManager) GenerateAccess(u model.User) (string, error) {
 	return token.SignedString(m.secret)
 }
 
+func (m *JWTManager) GenerateAccessToken(u model.User) (string, error) {
+	return m.GenerateAccess(u)
+}
+
 // Parse memverifikasi signature dan expiry token, mengembalikan identitas user
 func (m *JWTManager) Parse(tokenString string) (model.AuthUser, error) {
 	claims := &accessClaims{}
