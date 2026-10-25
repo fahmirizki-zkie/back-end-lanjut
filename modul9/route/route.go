@@ -78,6 +78,8 @@ func Register(app *fiber.App, pool *pgxpool.Pool, deps Dependencies) {
 	courses.Get("/", deps.CourseService.List)
 	courses.Get("/mine", deps.CourseService.Mine)
 	courses.Get("/:id", deps.CourseService.Get)
+	courses.Post("/:id/enroll", deps.CourseService.Enroll)
+	courses.Delete("/:id/enroll", deps.CourseService.Drop)
 }
 
 // healthCheck mengecek koneksi database.
