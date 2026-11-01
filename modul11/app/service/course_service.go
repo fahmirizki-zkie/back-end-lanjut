@@ -321,9 +321,21 @@ func (s *CourseService) UpdateQuota(c *fiber.Ctx) error {
 		return helper.Validation(errs)
 	}
 
-	// Satu pernyataan UPDATE saja, sehingga tidak perlu WithTx:
-	// setiap pernyataan tunggal di PostgreSQL sudah atomik dengan sendirinya.
-	updated, err := s.courses.UpdateQuota(ctx, id, req.Quota, req.Version)
+	var updated model.Course
+	err := s.tx.WithTx(ctx, func(tx repository.DBTX) error {
+		var err error
+		updated, err = s.courses.WithTx(tx).UpdateQuota(ctx, id, req.Quota, req.Version)
+		if err != nil {
+			return err
+		}
+
+		return s.outbox.WithTx(tx).Insert(ctx, model.EventCourseQuotaChanged, model.QuotaChangedEvent{
+			CourseID:   updated.ID,
+			CourseCode: updated.Code,
+			CourseName: updated.Name,
+			NewQuota:   req.Quota,
+		})
+	})
 	if err != nil {
 		return translateCourseError(err)
 	}

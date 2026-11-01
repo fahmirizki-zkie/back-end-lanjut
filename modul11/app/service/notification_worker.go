@@ -21,6 +21,7 @@ import (
 // lain menerima *fiber.Ctx.
 type NotificationWorker struct {
 	users         repository.UserRepository
+	courses       repository.CourseRepository
 	notifications repository.NotificationRepository
 	tx            *repository.TxManager
 	mailer        helper.Mailer
@@ -29,6 +30,7 @@ type NotificationWorker struct {
 
 func NewNotificationWorker(
 	users repository.UserRepository,
+	courses repository.CourseRepository,
 	notifications repository.NotificationRepository,
 	tx *repository.TxManager,
 	mailer helper.Mailer,
@@ -36,6 +38,7 @@ func NewNotificationWorker(
 ) *NotificationWorker {
 	return &NotificationWorker{
 		users:         users,
+		courses:       courses,
 		notifications: notifications,
 		tx:            tx,
 		mailer:        mailer,
@@ -58,6 +61,11 @@ func (w *NotificationWorker) HandleSend(ctx context.Context, t *asynq.Task) erro
 	if err := json.Unmarshal(t.Payload(), &job); err != nil {
 		return fmt.Errorf("%w: payload task rusak: %v", asynq.SkipRetry, err)
 	}
+
+	if job.EventType == model.EventCourseQuotaChanged {
+		return w.handleQuotaChanged(ctx, job)
+	}
+
 	var event model.EnrollmentEvent
 	if err := json.Unmarshal(job.Payload, &event); err != nil {
 		return fmt.Errorf("%w: payload event %d rusak: %v", asynq.SkipRetry, job.OutboxID, err)
@@ -113,5 +121,58 @@ func (w *NotificationWorker) HandleSend(ctx context.Context, t *asynq.Task) erro
 		slog.String("event", job.EventType),
 		slog.Int("retry", retry),
 		slog.Bool("already_sent", alreadySent))
+	return nil
+}
+
+func (w *NotificationWorker) handleQuotaChanged(ctx context.Context, job model.NotificationJob) error {
+	var event model.QuotaChangedEvent
+	if err := json.Unmarshal(job.Payload, &event); err != nil {
+		return fmt.Errorf("%w: payload event %d rusak: %v", asynq.SkipRetry, job.OutboxID, err)
+	}
+
+	students, err := w.courses.FindEnrolledUsers(ctx, event.CourseID)
+	if err != nil {
+		return err
+	}
+
+	allAlreadySent := true
+	for _, student := range students {
+		msg := BuildQuotaChangedMessage(event, student)
+		alreadySent := false
+		err := w.tx.WithTxOnce(ctx, func(tx repository.DBTX) error {
+			claimed, err := w.notifications.WithTx(tx).Claim(ctx, model.Notification{
+				OutboxID: job.OutboxID,
+				UserID:   student.ID,
+				Channel:  "email",
+				Subject:  msg.Subject,
+				Body:     msg.Body,
+			})
+			if err != nil {
+				return err
+			}
+			if !claimed {
+				alreadySent = true
+				return nil
+			}
+			return w.mailer.Send(ctx, msg)
+		})
+		if errors.Is(err, helper.ErrPermanentDelivery) {
+			w.logger.Warn("permanent delivery error for student", slog.Int("user_id", student.ID), slog.String("error", err.Error()))
+			continue
+		}
+		if err != nil {
+			return err // Asynq will retry later
+		}
+		if !alreadySent {
+			allAlreadySent = false
+		}
+	}
+
+	retry, _ := asynq.GetRetryCount(ctx)
+	w.logger.Info("notification_processed",
+		slog.Int64("outbox_id", job.OutboxID),
+		slog.String("event", job.EventType),
+		slog.Int("retry", retry),
+		slog.Bool("already_sent", allAlreadySent))
 	return nil
 }

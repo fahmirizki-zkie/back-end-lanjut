@@ -9,9 +9,10 @@ import (
 // bukan string yang diketik ulang di banyak tempat, karena salah ketik pada
 // nama event tidak ditangkap compiler maupun database.
 const (
-	EventEnrollmentCreated = "enrollment.created"
-	EventEnrollmentDropped = "enrollment.dropped"
-	EventEnrollmentSwapped = "enrollment.swapped"
+	EventEnrollmentCreated   = "enrollment.created"
+	EventEnrollmentDropped   = "enrollment.dropped"
+	EventEnrollmentSwapped   = "enrollment.swapped"
+	EventCourseQuotaChanged  = "course.quota_changed"
 )
 
 // TaskSendNotification adalah nama JENIS task (task type); worker memakainya untuk
@@ -35,6 +36,14 @@ type EnrollmentEvent struct {
 	CourseName     string `json:"course_name"`
 	FromCourseCode string `json:"from_course_code,omitempty"`
 	FromCourseName string `json:"from_course_name,omitempty"`
+}
+
+// QuotaChangedEvent mencatat perubahan kuota suatu kelas.
+type QuotaChangedEvent struct {
+	CourseID   int    `json:"course_id"`
+	CourseCode string `json:"course_code"`
+	CourseName string `json:"course_name"`
+	NewQuota   int    `json:"new_quota"`
 }
 
 // OutboxEvent adalah satu baris tabel outbox.
