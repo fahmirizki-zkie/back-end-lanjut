@@ -16,8 +16,12 @@ type Config struct {
 	DBSSLMode  string
 }
 
-func Load() Config {
+func LoadEnv() {
 	_ = godotenv.Load()
+}
+
+func Load() Config {
+	LoadEnv()
 
 	return Config{
 		DBHost:     os.Getenv("DB_HOST"),
